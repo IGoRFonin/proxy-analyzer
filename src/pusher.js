@@ -1,31 +1,49 @@
 import { execFile } from 'node:child_process';
 import { logger } from './logger.js';
 
-function exec(cmd, args, cwd) {
+function exec(cmd, args) {
   return new Promise((resolve, reject) => {
-    execFile(cmd, args, { cwd }, (error, stdout, stderr) => {
+    execFile(cmd, args, (error, stdout, stderr) => {
       if (error) reject(new Error(stderr || error.message));
       else resolve(stdout.trim());
     });
   });
 }
 
+/**
+ * Sync data/ and public/ to the remote server via rsync.
+ *
+ * Expects env vars:
+ *   SYNC_TARGET  — user@host:/path/to/app-data
+ *   SYNC_KEY     — (optional) path to SSH private key
+ */
 export async function push(repoDir) {
+  const target = process.env.SYNC_TARGET;
+  if (!target) {
+    logger.warn('Push: SYNC_TARGET not set, skipping');
+    return;
+  }
+
+  const sshArgs = process.env.SYNC_KEY
+    ? `-e "ssh -i ${process.env.SYNC_KEY} -o StrictHostKeyChecking=no"`
+    : '-e "ssh -o StrictHostKeyChecking=no"';
+
   try {
-    const status = await exec('git', ['status', '--porcelain', 'data/', 'public/'], repoDir);
-    if (!status) {
-      logger.info('Push: no changes to commit');
-      return;
-    }
+    await exec('rsync', [
+      '-az', '--delete',
+      ...sshArgs.split(' '),
+      `${repoDir}/data/`,
+      `${target}/data/`,
+    ]);
 
-    const now = new Date();
-    const msg = `update ${now.toISOString().slice(0, 10)} ${now.toISOString().slice(11, 16)}`;
+    await exec('rsync', [
+      '-az', '--delete',
+      ...sshArgs.split(' '),
+      `${repoDir}/public/`,
+      `${target}/public/`,
+    ]);
 
-    await exec('git', ['add', 'data/', 'public/'], repoDir);
-    await exec('git', ['commit', '-m', msg], repoDir);
-    await exec('git', ['push', 'origin', 'main'], repoDir);
-
-    logger.info(`Push: committed and pushed "${msg}"`);
+    logger.info(`Push: synced data and public to ${target}`);
   } catch (err) {
     logger.warn(`Push failed: ${err.message}`);
   }

@@ -2,3 +2,6 @@ node_modules/
 .claude/
 docs/superpowers/
 proxies.txt
+data/
+public/index.html
+.env

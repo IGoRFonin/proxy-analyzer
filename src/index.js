@@ -1,6 +1,6 @@
+import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
 import cron from 'node-cron';
 import { validate } from './validator.js';
 import { testProxies } from './tester.js';
@@ -9,25 +9,6 @@ import { generateHTML } from './reporter.js';
 import { push } from './pusher.js';
 import { logger } from './logger.js';
 
-function exec(cmd, args, cwd) {
-  return new Promise((resolve, reject) => {
-    execFile(cmd, args, { cwd }, (error, stdout, stderr) => {
-      if (error) reject(new Error(stderr || error.message));
-      else resolve(stdout.trim());
-    });
-  });
-}
-
-async function gitPull(repoDir) {
-  try {
-    await exec('git', ['pull', '--rebase', 'origin', 'main'], repoDir);
-  } catch {
-    logger.warn('Pull conflict, resetting public/index.html and retrying');
-    await exec('git', ['checkout', '--', 'public/index.html'], repoDir);
-    await exec('git', ['rebase', '--abort'], repoDir).catch(() => {});
-    await exec('git', ['pull', '--rebase', 'origin', 'main'], repoDir);
-  }
-}
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const DATA_DIR = path.join(ROOT, 'data');
@@ -67,9 +48,6 @@ async function runTest(mode) {
     storage.append(measurement);
     storage.updateIpHistory(measurement.results);
 
-    // Pull latest before regenerating HTML to avoid conflicts
-    await gitPull(ROOT);
-
     // Regenerate HTML
     const allData = storage.readDays(7);
     const ipChanges = storage.getIpChanges();
@@ -98,7 +76,7 @@ cron.schedule('0 9,15,22 * * *', () => {
   runTest('heavy');
 });
 
-// Git push hourly at :05
+// Sync data to Coolify server hourly at :05
 cron.schedule('5 * * * *', () => {
   push(ROOT);
 });
