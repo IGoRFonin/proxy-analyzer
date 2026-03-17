@@ -1,0 +1,128 @@
+[
+  {
+    "time": "2026-03-17T19:34:37.177Z",
+    "type": "light",
+    "results": [
+      {
+        "name": "kz1",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3081",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 595,
+        "total_ms": 634,
+        "speed_1mb_kbps": 622,
+        "speed_10mb_kbps": null,
+        "exit_ip": "91.217.10.65"
+      },
+      {
+        "name": "de1",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3082",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 284,
+        "total_ms": 317,
+        "speed_1mb_kbps": 1700,
+        "speed_10mb_kbps": null,
+        "exit_ip": "5.231.45.71"
+      },
+      {
+        "name": "nl1",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3083",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 256,
+        "total_ms": 353,
+        "speed_1mb_kbps": 1749,
+        "speed_10mb_kbps": null,
+        "exit_ip": "81.171.17.141"
+      },
+      {
+        "name": "sweden-310-gbit-low-ping",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3084",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 514,
+        "total_ms": 547,
+        "speed_1mb_kbps": 1694,
+        "speed_10mb_kbps": null,
+        "exit_ip": "195.47.238.12"
+      },
+      {
+        "name": "sweden-3xhttp",
+        "transport": "xhttp",
+        "proxy": "http://127.0.0.1:3085",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 985,
+        "total_ms": 1062,
+        "speed_1mb_kbps": 960,
+        "speed_10mb_kbps": null,
+        "exit_ip": "195.72.61.15"
+      },
+      {
+        "name": "sweden-310-gbit-low-ping-2",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3086",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 600,
+        "total_ms": 673,
+        "speed_1mb_kbps": 2166,
+        "speed_10mb_kbps": null,
+        "exit_ip": "195.47.238.12"
+      },
+      {
+        "name": "latvia-low-ping",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3087",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 546,
+        "total_ms": 586,
+        "speed_1mb_kbps": 2404,
+        "speed_10mb_kbps": null,
+        "exit_ip": "185.145.245.236"
+      },
+      {
+        "name": "poland10-gbit-low-ping",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3088",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 835,
+        "total_ms": 867,
+        "speed_1mb_kbps": 722,
+        "speed_10mb_kbps": null,
+        "exit_ip": "144.31.1.58"
+      },
+      {
+        "name": "estonia-110-gbit-low-ping",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3089",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 565,
+        "total_ms": 647,
+        "speed_1mb_kbps": 2326,
+        "speed_10mb_kbps": null,
+        "exit_ip": "185.223.171.1"
+      },
+      {
+        "name": "uk-210-gbit",
+        "transport": "tcp",
+        "proxy": "http://127.0.0.1:3090",
+        "status": "ok",
+        "http_code": 200,
+        "ttfb_ms": 333,
+        "total_ms": 364,
+        "speed_1mb_kbps": 1430,
+        "speed_10mb_kbps": null,
+        "exit_ip": "45.91.93.47"
+      }
+    ]
+  }
+]

@@ -2,5 +2,14 @@
 # transport: tcp, xhttp, socks5, http
 # name: a-zA-Z0-9- only, must be unique
 # url: http:// or socks5://
-tcp|example-tcp|http://192.168.31.102:3084
-xhttp|example-xhttp|http://192.168.31.102:3085
+tcp|kz1|http://127.0.0.1:3081
+tcp|de1|http://127.0.0.1:3082
+tcp|nl1|http://127.0.0.1:3083
+tcp|sweden-310-gbit-low-ping|http://127.0.0.1:3084
+xhttp|sweden-3xhttp|http://127.0.0.1:3085
+tcp|sweden-310-gbit-low-ping-2|http://127.0.0.1:3086
+tcp|latvia-low-ping|http://127.0.0.1:3087
+tcp|poland10-gbit-low-ping|http://127.0.0.1:3088
+tcp|estonia-110-gbit-low-ping|http://127.0.0.1:3089
+tcp|uk-210-gbit|http://127.0.0.1:3090
+
