@@ -1,131 +1,271 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Proxy Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['Fira Code', 'monospace'],
+        display: ['Orbitron', 'sans-serif'],
+      },
+      colors: {
+        neon: {
+          cyan: '#00FFD1',
+          magenta: '#FF00FF',
+          blue: '#00BFFF',
+          lime: '#39FF14',
+          pink: '#FF1493',
+        }
+      }
+    },
+  },
+}
+</script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e1e4e8; padding: 20px; }
-  h1 { margin-bottom: 8px; }
-  .meta { color: #8b949e; margin-bottom: 24px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
-  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; }
-  th { cursor: pointer; color: #8b949e; font-weight: 600; }
-  th:hover { color: #e1e4e8; }
-  .ok { color: #3fb950; }
-  .warn { color: #d29922; }
-  .fail { color: #f85149; }
-  .chart-container { max-width: 900px; margin: 0 auto 32px; }
-  .section { margin-bottom: 32px; }
-  .section h2 { margin-bottom: 12px; color: #8b949e; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-  .cards { display: flex; gap: 16px; flex-wrap: wrap; }
-  .card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px 16px; min-width: 160px; }
-  .card .name { font-weight: 600; margin-bottom: 4px; }
-  .card .stat { font-size: 24px; font-weight: 700; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    .scanlines::before { display: none !important; }
+  }
+  body { font-family: 'Inter', sans-serif; }
+  .font-mono { font-family: 'Fira Code', monospace; }
+  .font-display { font-family: 'Orbitron', sans-serif; }
+
+  .dark .scanlines::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 209, 0.015) 2px, rgba(0, 255, 209, 0.015) 4px);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .dark .grid-bg {
+    background-color: #0a0a0f;
+    background-image:
+      linear-gradient(rgba(0, 255, 209, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 209, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  html:not(.dark) .grid-bg {
+    background-color: #f1f5f9;
+    background-image:
+      linear-gradient(rgba(100, 116, 139, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(100, 116, 139, 0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .neon-card {
+    border: 1px solid rgba(0, 255, 209, 0.2);
+    transition: box-shadow 300ms, border-color 300ms;
+  }
+  .dark .neon-card {
+    background: rgba(10, 10, 20, 0.8);
+  }
+  .dark .neon-card:hover {
+    border-color: rgba(0, 255, 209, 0.5);
+    box-shadow: 0 0 20px rgba(0, 255, 209, 0.1), inset 0 0 20px rgba(0, 255, 209, 0.03);
+  }
+  html:not(.dark) .neon-card {
+    background: white;
+    border-color: #e2e8f0;
+  }
+  html:not(.dark) .neon-card:hover {
+    border-color: #0d9488;
+    box-shadow: 0 0 15px rgba(13, 148, 136, 0.1);
+  }
+
+  .neon-glow { text-shadow: 0 0 10px rgba(0, 255, 209, 0.5), 0 0 30px rgba(0, 255, 209, 0.2); }
+  html:not(.dark) .neon-glow { text-shadow: none; color: #0f766e; }
+
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 10px 14px; text-align: left; white-space: nowrap; }
+  th { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; transition: color 200ms; }
+  .dark th { color: #00FFD1; opacity: 0.5; border-bottom: 1px solid rgba(0, 255, 209, 0.15); }
+  .dark th:hover { opacity: 1; }
+  .dark td { border-bottom: 1px solid rgba(0, 255, 209, 0.08); color: #e2e8f0; }
+  html:not(.dark) th { color: #0f766e; border-bottom: 2px solid #e2e8f0; }
+  html:not(.dark) td { border-bottom: 1px solid #f1f5f9; color: #334155; }
+  html:not(.dark) th:hover { color: #134e4a; }
+
+  .dark .ok { color: #00FFD1; }
+  .dark .warn { color: #FFD700; }
+  .dark .fail { color: #FF1493; }
+  html:not(.dark) .ok { color: #059669; }
+  html:not(.dark) .warn { color: #d97706; }
+  html:not(.dark) .fail { color: #dc2626; }
 </style>
 </head>
-<body>
-<h1>Proxy Analyzer</h1>
-<p class="meta">Updated: <span id="updated"></span> | Proxies: <span id="count"></span></p>
+<body class="min-h-screen transition-colors duration-300">
+<div class="scanlines grid-bg min-h-screen">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
 
-<div class="section">
-  <h2>Today's Summary</h2>
-  <table id="summary">
-    <thead>
-      <tr><th>Name</th><th>Transport</th><th>Success %</th><th>Avg TTFB</th><th>P95 TTFB</th><th>Avg 1MB</th><th>10MB</th><th>IP Changes</th><th>Status</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold font-display dark:text-neon-cyan text-teal-700 neon-glow tracking-wider">PROXY ANALYZER</h1>
+      <p class="text-xs dark:text-slate-500 text-slate-400 mt-2 font-mono">
+        <span class="dark:text-neon-cyan/40 text-teal-600">&gt;</span> Updated: <span id="updated"></span> &middot; Nodes: <span id="count"></span>
+      </p>
+    </div>
+    <button id="themeToggle" class="cursor-pointer neon-card rounded-lg p-3 transition-all duration-200 hover:scale-105 active:scale-95" aria-label="Toggle theme">
+      <svg id="iconSun" class="w-5 h-5 hidden dark:block text-neon-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg id="iconMoon" class="w-5 h-5 block dark:hidden text-teal-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+    </button>
+  </div>
+
+  <div class="neon-card rounded-xl p-4 sm:p-6 mb-6">
+    <h2 class="text-xs font-display uppercase tracking-[0.2em] dark:text-neon-cyan/50 text-teal-600 mb-4">// Today's Summary</h2>
+    <div class="table-scroll">
+      <table id="summary">
+        <thead><tr><th>Name</th><th>Transport</th><th>Success %</th><th>Avg TTFB</th><th>P95 TTFB</th><th>Avg 1MB</th><th>10MB</th><th>IP Changes</th><th>Status</th></tr></thead>
+        <tbody class="font-mono text-sm"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="neon-card rounded-xl p-4 sm:p-6">
+      <h2 class="text-xs font-display uppercase tracking-[0.2em] dark:text-neon-cyan/50 text-teal-600 mb-4">// Top 5 Nodes</h2>
+      <div class="space-y-3" id="top5"></div>
+    </div>
+    <div class="neon-card rounded-xl p-4 sm:p-6">
+      <h2 class="text-xs font-display uppercase tracking-[0.2em] dark:text-neon-magenta/50 text-rose-500 mb-4">// Worst 5 Nodes</h2>
+      <div class="space-y-3" id="worst5"></div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="neon-card rounded-xl p-4 sm:p-6">
+      <h2 class="text-xs font-display uppercase tracking-[0.2em] dark:text-neon-cyan/50 text-teal-600 mb-4">// Availability (7 days)</h2>
+      <canvas id="availChart"></canvas>
+    </div>
+    <div class="neon-card rounded-xl p-4 sm:p-6">
+      <h2 class="text-xs font-display uppercase tracking-[0.2em] dark:text-neon-cyan/50 text-teal-600 mb-4">// TTFB (7 days)</h2>
+      <canvas id="ttfbChart"></canvas>
+    </div>
+  </div>
+
+  <div class="neon-card rounded-xl p-4 sm:p-6">
+    <h2 class="text-xs font-display uppercase tracking-[0.2em] dark:text-neon-cyan/50 text-teal-600 mb-4">// Latest Scan</h2>
+    <div class="table-scroll">
+      <table id="latest">
+        <thead><tr><th>Name</th><th>Status</th><th>TTFB</th><th>1MB Speed</th><th>10MB Speed</th></tr></thead>
+        <tbody class="font-mono text-sm"></tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
-
-<div class="section">
-  <h2>Top 5</h2>
-  <div class="cards" id="top5"></div>
-</div>
-
-<div class="section">
-  <h2>Worst 5</h2>
-  <div class="cards" id="worst5"></div>
-</div>
-
-<div class="section">
-  <h2>Availability (7 days)</h2>
-  <div class="chart-container"><canvas id="availChart"></canvas></div>
-</div>
-
-<div class="section">
-  <h2>TTFB (7 days)</h2>
-  <div class="chart-container"><canvas id="ttfbChart"></canvas></div>
-</div>
-
-<div class="section">
-  <h2>Latest Measurement</h2>
-  <table id="latest">
-    <thead><tr><th>Name</th><th>Status</th><th>TTFB</th><th>1MB Speed</th><th>10MB Speed</th></tr></thead>
-    <tbody></tbody>
-  </table>
 </div>
 
 <script>
-const DATA = {"days":["2026-03-17"],"today":"2026-03-17","top":[{"name":"nl1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":256,"p95Ttfb":256,"avgSpeed1mb":1749,"latestSpeed10mb":null},{"name":"de1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":284,"p95Ttfb":284,"avgSpeed1mb":1700,"latestSpeed10mb":null},{"name":"uk-210-gbit","transport":"tcp","tests":1,"successRate":100,"avgTtfb":333,"p95Ttfb":333,"avgSpeed1mb":1430,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":514,"p95Ttfb":514,"avgSpeed1mb":1694,"latestSpeed10mb":null},{"name":"latvia-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":546,"p95Ttfb":546,"avgSpeed1mb":2404,"latestSpeed10mb":null}],"worst":[{"name":"sweden-3xhttp","transport":"xhttp","tests":1,"successRate":100,"avgTtfb":985,"p95Ttfb":985,"avgSpeed1mb":960,"latestSpeed10mb":null},{"name":"poland10-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":835,"p95Ttfb":835,"avgSpeed1mb":722,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping-2","transport":"tcp","tests":1,"successRate":100,"avgTtfb":600,"p95Ttfb":600,"avgSpeed1mb":2166,"latestSpeed10mb":null},{"name":"kz1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":595,"p95Ttfb":595,"avgSpeed1mb":622,"latestSpeed10mb":null},{"name":"estonia-110-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":565,"p95Ttfb":565,"avgSpeed1mb":2326,"latestSpeed10mb":null}],"tableRows":[{"name":"de1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":284,"p95Ttfb":284,"avgSpeed1mb":1700,"latestSpeed10mb":null},{"name":"estonia-110-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":565,"p95Ttfb":565,"avgSpeed1mb":2326,"latestSpeed10mb":null},{"name":"kz1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":595,"p95Ttfb":595,"avgSpeed1mb":622,"latestSpeed10mb":null},{"name":"latvia-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":546,"p95Ttfb":546,"avgSpeed1mb":2404,"latestSpeed10mb":null},{"name":"nl1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":256,"p95Ttfb":256,"avgSpeed1mb":1749,"latestSpeed10mb":null},{"name":"poland10-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":835,"p95Ttfb":835,"avgSpeed1mb":722,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":514,"p95Ttfb":514,"avgSpeed1mb":1694,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping-2","transport":"tcp","tests":1,"successRate":100,"avgTtfb":600,"p95Ttfb":600,"avgSpeed1mb":2166,"latestSpeed10mb":null},{"name":"sweden-3xhttp","transport":"xhttp","tests":1,"successRate":100,"avgTtfb":985,"p95Ttfb":985,"avgSpeed1mb":960,"latestSpeed10mb":null},{"name":"uk-210-gbit","transport":"tcp","tests":1,"successRate":100,"avgTtfb":333,"p95Ttfb":333,"avgSpeed1mb":1430,"latestSpeed10mb":null}],"availabilityData":[{"label":"de1","data":[100]},{"label":"estonia-110-gbit-low-ping","data":[100]},{"label":"kz1","data":[100]},{"label":"latvia-low-ping","data":[100]},{"label":"nl1","data":[100]},{"label":"poland10-gbit-low-ping","data":[100]},{"label":"sweden-310-gbit-low-ping","data":[100]},{"label":"sweden-310-gbit-low-ping-2","data":[100]},{"label":"sweden-3xhttp","data":[100]},{"label":"uk-210-gbit","data":[100]}],"ttfbData":[{"label":"de1","data":[284]},{"label":"estonia-110-gbit-low-ping","data":[565]},{"label":"kz1","data":[595]},{"label":"latvia-low-ping","data":[546]},{"label":"nl1","data":[256]},{"label":"poland10-gbit-low-ping","data":[835]},{"label":"sweden-310-gbit-low-ping","data":[514]},{"label":"sweden-310-gbit-low-ping-2","data":[600]},{"label":"sweden-3xhttp","data":[985]},{"label":"uk-210-gbit","data":[333]}],"lastMeasurement":{"time":"2026-03-17T19:34:37.177Z","type":"light","results":[{"name":"kz1","transport":"tcp","proxy":"http://127.0.0.1:3081","status":"ok","http_code":200,"ttfb_ms":595,"total_ms":634,"speed_1mb_kbps":622,"speed_10mb_kbps":null,"exit_ip":"91.217.10.65"},{"name":"de1","transport":"tcp","proxy":"http://127.0.0.1:3082","status":"ok","http_code":200,"ttfb_ms":284,"total_ms":317,"speed_1mb_kbps":1700,"speed_10mb_kbps":null,"exit_ip":"5.231.45.71"},{"name":"nl1","transport":"tcp","proxy":"http://127.0.0.1:3083","status":"ok","http_code":200,"ttfb_ms":256,"total_ms":353,"speed_1mb_kbps":1749,"speed_10mb_kbps":null,"exit_ip":"81.171.17.141"},{"name":"sweden-310-gbit-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3084","status":"ok","http_code":200,"ttfb_ms":514,"total_ms":547,"speed_1mb_kbps":1694,"speed_10mb_kbps":null,"exit_ip":"195.47.238.12"},{"name":"sweden-3xhttp","transport":"xhttp","proxy":"http://127.0.0.1:3085","status":"ok","http_code":200,"ttfb_ms":985,"total_ms":1062,"speed_1mb_kbps":960,"speed_10mb_kbps":null,"exit_ip":"195.72.61.15"},{"name":"sweden-310-gbit-low-ping-2","transport":"tcp","proxy":"http://127.0.0.1:3086","status":"ok","http_code":200,"ttfb_ms":600,"total_ms":673,"speed_1mb_kbps":2166,"speed_10mb_kbps":null,"exit_ip":"195.47.238.12"},{"name":"latvia-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3087","status":"ok","http_code":200,"ttfb_ms":546,"total_ms":586,"speed_1mb_kbps":2404,"speed_10mb_kbps":null,"exit_ip":"185.145.245.236"},{"name":"poland10-gbit-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3088","status":"ok","http_code":200,"ttfb_ms":835,"total_ms":867,"speed_1mb_kbps":722,"speed_10mb_kbps":null,"exit_ip":"144.31.1.58"},{"name":"estonia-110-gbit-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3089","status":"ok","http_code":200,"ttfb_ms":565,"total_ms":647,"speed_1mb_kbps":2326,"speed_10mb_kbps":null,"exit_ip":"185.223.171.1"},{"name":"uk-210-gbit","transport":"tcp","proxy":"http://127.0.0.1:3090","status":"ok","http_code":200,"ttfb_ms":333,"total_ms":364,"speed_1mb_kbps":1430,"speed_10mb_kbps":null,"exit_ip":"45.91.93.47"}]},"proxyCount":10,"ipChanges":{"kz1":0,"de1":0,"nl1":0,"sweden-310-gbit-low-ping":0,"sweden-3xhttp":0,"sweden-310-gbit-low-ping-2":0,"latvia-low-ping":0,"poland10-gbit-low-ping":0,"estonia-110-gbit-low-ping":0,"uk-210-gbit":0},"generatedAt":"2026-03-17T19:34:40.169Z"};
+const DATA = {"days":["2026-03-17"],"today":"2026-03-17","top":[{"name":"nl1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":256,"p95Ttfb":256,"avgSpeed1mb":1749,"latestSpeed10mb":null},{"name":"de1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":284,"p95Ttfb":284,"avgSpeed1mb":1700,"latestSpeed10mb":null},{"name":"uk-210-gbit","transport":"tcp","tests":1,"successRate":100,"avgTtfb":333,"p95Ttfb":333,"avgSpeed1mb":1430,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":514,"p95Ttfb":514,"avgSpeed1mb":1694,"latestSpeed10mb":null},{"name":"latvia-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":546,"p95Ttfb":546,"avgSpeed1mb":2404,"latestSpeed10mb":null}],"worst":[{"name":"sweden-3xhttp","transport":"xhttp","tests":1,"successRate":100,"avgTtfb":985,"p95Ttfb":985,"avgSpeed1mb":960,"latestSpeed10mb":null},{"name":"poland10-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":835,"p95Ttfb":835,"avgSpeed1mb":722,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping-2","transport":"tcp","tests":1,"successRate":100,"avgTtfb":600,"p95Ttfb":600,"avgSpeed1mb":2166,"latestSpeed10mb":null},{"name":"kz1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":595,"p95Ttfb":595,"avgSpeed1mb":622,"latestSpeed10mb":null},{"name":"estonia-110-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":565,"p95Ttfb":565,"avgSpeed1mb":2326,"latestSpeed10mb":null}],"tableRows":[{"name":"de1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":284,"p95Ttfb":284,"avgSpeed1mb":1700,"latestSpeed10mb":null},{"name":"estonia-110-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":565,"p95Ttfb":565,"avgSpeed1mb":2326,"latestSpeed10mb":null},{"name":"kz1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":595,"p95Ttfb":595,"avgSpeed1mb":622,"latestSpeed10mb":null},{"name":"latvia-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":546,"p95Ttfb":546,"avgSpeed1mb":2404,"latestSpeed10mb":null},{"name":"nl1","transport":"tcp","tests":1,"successRate":100,"avgTtfb":256,"p95Ttfb":256,"avgSpeed1mb":1749,"latestSpeed10mb":null},{"name":"poland10-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":835,"p95Ttfb":835,"avgSpeed1mb":722,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping","transport":"tcp","tests":1,"successRate":100,"avgTtfb":514,"p95Ttfb":514,"avgSpeed1mb":1694,"latestSpeed10mb":null},{"name":"sweden-310-gbit-low-ping-2","transport":"tcp","tests":1,"successRate":100,"avgTtfb":600,"p95Ttfb":600,"avgSpeed1mb":2166,"latestSpeed10mb":null},{"name":"sweden-3xhttp","transport":"xhttp","tests":1,"successRate":100,"avgTtfb":985,"p95Ttfb":985,"avgSpeed1mb":960,"latestSpeed10mb":null},{"name":"uk-210-gbit","transport":"tcp","tests":1,"successRate":100,"avgTtfb":333,"p95Ttfb":333,"avgSpeed1mb":1430,"latestSpeed10mb":null}],"availabilityData":[{"label":"de1","data":[100]},{"label":"estonia-110-gbit-low-ping","data":[100]},{"label":"kz1","data":[100]},{"label":"latvia-low-ping","data":[100]},{"label":"nl1","data":[100]},{"label":"poland10-gbit-low-ping","data":[100]},{"label":"sweden-310-gbit-low-ping","data":[100]},{"label":"sweden-310-gbit-low-ping-2","data":[100]},{"label":"sweden-3xhttp","data":[100]},{"label":"uk-210-gbit","data":[100]}],"ttfbData":[{"label":"de1","data":[284]},{"label":"estonia-110-gbit-low-ping","data":[565]},{"label":"kz1","data":[595]},{"label":"latvia-low-ping","data":[546]},{"label":"nl1","data":[256]},{"label":"poland10-gbit-low-ping","data":[835]},{"label":"sweden-310-gbit-low-ping","data":[514]},{"label":"sweden-310-gbit-low-ping-2","data":[600]},{"label":"sweden-3xhttp","data":[985]},{"label":"uk-210-gbit","data":[333]}],"lastMeasurement":{"time":"2026-03-17T19:34:37.177Z","type":"light","results":[{"name":"kz1","transport":"tcp","proxy":"http://127.0.0.1:3081","status":"ok","http_code":200,"ttfb_ms":595,"total_ms":634,"speed_1mb_kbps":622,"speed_10mb_kbps":null,"exit_ip":"91.217.10.65"},{"name":"de1","transport":"tcp","proxy":"http://127.0.0.1:3082","status":"ok","http_code":200,"ttfb_ms":284,"total_ms":317,"speed_1mb_kbps":1700,"speed_10mb_kbps":null,"exit_ip":"5.231.45.71"},{"name":"nl1","transport":"tcp","proxy":"http://127.0.0.1:3083","status":"ok","http_code":200,"ttfb_ms":256,"total_ms":353,"speed_1mb_kbps":1749,"speed_10mb_kbps":null,"exit_ip":"81.171.17.141"},{"name":"sweden-310-gbit-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3084","status":"ok","http_code":200,"ttfb_ms":514,"total_ms":547,"speed_1mb_kbps":1694,"speed_10mb_kbps":null,"exit_ip":"195.47.238.12"},{"name":"sweden-3xhttp","transport":"xhttp","proxy":"http://127.0.0.1:3085","status":"ok","http_code":200,"ttfb_ms":985,"total_ms":1062,"speed_1mb_kbps":960,"speed_10mb_kbps":null,"exit_ip":"195.72.61.15"},{"name":"sweden-310-gbit-low-ping-2","transport":"tcp","proxy":"http://127.0.0.1:3086","status":"ok","http_code":200,"ttfb_ms":600,"total_ms":673,"speed_1mb_kbps":2166,"speed_10mb_kbps":null,"exit_ip":"195.47.238.12"},{"name":"latvia-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3087","status":"ok","http_code":200,"ttfb_ms":546,"total_ms":586,"speed_1mb_kbps":2404,"speed_10mb_kbps":null,"exit_ip":"185.145.245.236"},{"name":"poland10-gbit-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3088","status":"ok","http_code":200,"ttfb_ms":835,"total_ms":867,"speed_1mb_kbps":722,"speed_10mb_kbps":null,"exit_ip":"144.31.1.58"},{"name":"estonia-110-gbit-low-ping","transport":"tcp","proxy":"http://127.0.0.1:3089","status":"ok","http_code":200,"ttfb_ms":565,"total_ms":647,"speed_1mb_kbps":2326,"speed_10mb_kbps":null,"exit_ip":"185.223.171.1"},{"name":"uk-210-gbit","transport":"tcp","proxy":"http://127.0.0.1:3090","status":"ok","http_code":200,"ttfb_ms":333,"total_ms":364,"speed_1mb_kbps":1430,"speed_10mb_kbps":null,"exit_ip":"45.91.93.47"}]},"proxyCount":10,"ipChanges":{"kz1":0,"de1":0,"nl1":0,"sweden-310-gbit-low-ping":0,"sweden-3xhttp":0,"sweden-310-gbit-low-ping-2":0,"latvia-low-ping":0,"poland10-gbit-low-ping":0,"estonia-110-gbit-low-ping":0,"uk-210-gbit":0},"generatedAt":"2026-03-17T21:50:59.445Z"};
+
+const html = document.documentElement;
+const THEME_KEY = 'proxy-analyzer-theme';
+const saved = localStorage.getItem(THEME_KEY);
+if (saved === 'light') {
+  html.classList.remove('dark');
+} else {
+  html.classList.add('dark');
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  html.classList.toggle('dark');
+  localStorage.setItem(THEME_KEY, html.classList.contains('dark') ? 'dark' : 'light');
+  updateCharts();
+});
+const isDark = () => html.classList.contains('dark');
 
 document.getElementById('updated').textContent = new Date(DATA.generatedAt).toLocaleString();
 document.getElementById('count').textContent = DATA.proxyCount;
 
+const svgOk = '<svg class="w-5 h-5 inline ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>';
+const svgWarn = '<svg class="w-5 h-5 inline warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+const svgFail = '<svg class="w-5 h-5 inline fail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+
 const tbody = document.querySelector('#summary tbody');
 DATA.tableRows.forEach(r => {
   const statusClass = (r.successRate ?? 0) > 90 ? 'ok' : (r.successRate ?? 0) > 50 ? 'warn' : 'fail';
-  const statusIcon = statusClass === 'ok' ? '\u2705' : statusClass === 'warn' ? '\u26A0\uFE0F' : '\u274C';
+  const statusIcon = statusClass === 'ok' ? svgOk : statusClass === 'warn' ? svgWarn : svgFail;
   const ipChanges = DATA.ipChanges[r.name] ?? 0;
-  tbody.innerHTML += '<tr><td>' + (r.name||'') + '</td><td>' + (r.transport||'') + '</td><td class="' + statusClass + '">' + (r.successRate??0) + '%</td><td>' + (r.avgTtfb??0) + 'ms</td><td>' + (r.p95Ttfb??0) + 'ms</td><td>' + (r.avgSpeed1mb??0) + ' KB/s</td><td>' + (r.latestSpeed10mb != null ? r.latestSpeed10mb + ' KB/s' : '\u2014') + '</td><td>' + ipChanges + '</td><td>' + statusIcon + '</td></tr>';
+  tbody.innerHTML += '<tr class="transition-colors duration-150 dark:hover:bg-neon-cyan/5 hover:bg-teal-50"><td class="font-medium">' + (r.name||'') + '</td><td class="dark:text-slate-500 text-slate-400">' + (r.transport||'') + '</td><td class="font-semibold ' + statusClass + '">' + (r.successRate??0) + '%</td><td>' + (r.avgTtfb??0) + 'ms</td><td>' + (r.p95Ttfb??0) + 'ms</td><td>' + (r.avgSpeed1mb??0) + ' KB/s</td><td>' + (r.latestSpeed10mb != null ? r.latestSpeed10mb + ' KB/s' : '\u2014') + '</td><td>' + ipChanges + '</td><td>' + statusIcon + '</td></tr>';
 });
 
 function renderCards(containerId, items) {
   const el = document.getElementById(containerId);
+  const isWorst = containerId === 'worst5';
   items.forEach(r => {
     const cls = r.successRate > 90 ? 'ok' : r.successRate > 50 ? 'warn' : 'fail';
-    el.innerHTML += '<div class="card"><div class="name">' + r.name + '</div><div class="stat ' + cls + '">' + r.successRate + '%</div><div>' + r.avgTtfb + 'ms / ' + r.avgSpeed1mb + ' KB/s</div></div>';
+    const borderColor = isWorst ? 'border-pink-500/20 dark:border-neon-magenta/20' : 'border-teal-500/20 dark:border-neon-cyan/20';
+    const hoverBorder = isWorst ? 'hover:border-pink-400 dark:hover:border-neon-magenta/50' : 'hover:border-teal-400 dark:hover:border-neon-cyan/50';
+    el.innerHTML += '<div class="cursor-pointer rounded-lg p-4 border ' + borderColor + ' dark:bg-black/40 bg-white transition-all duration-200 ' + hoverBorder + ' flex items-center justify-between"><div><div class="font-semibold text-sm dark:text-slate-300 text-slate-700 font-mono">' + r.name + '</div><div class="text-xs dark:text-slate-500 text-slate-400 font-mono mt-1">' + r.avgTtfb + 'ms / ' + r.avgSpeed1mb + ' KB/s</div></div><div class="text-2xl font-bold font-display ' + cls + '">' + r.successRate + '%</div></div>';
   });
 }
 renderCards('top5', DATA.top);
 renderCards('worst5', DATA.worst);
 
-const colors = ['#3fb950','#58a6ff','#d29922','#f85149','#bc8cff','#39d2c0','#ff7b72','#79c0ff','#ffa657','#f778ba'];
+const neonColors = ['#00FFD1','#00BFFF','#FF00FF','#39FF14','#FF1493','#FFD700','#00FF7F','#7B68EE','#FF6347','#00CED1'];
+const lightColors = ['#059669','#0284c7','#9333ea','#16a34a','#db2777','#d97706','#0d9488','#6d28d9','#dc2626','#0891b2'];
+let availChartInst, ttfbChartInst;
 
-function makeChart(canvasId, datasets, label) {
-  new Chart(document.getElementById(canvasId), {
+function getChartOpts() {
+  const d = isDark();
+  return {
+    responsive: true,
+    plugins: { legend: { labels: { color: d ? '#94a3b8' : '#64748b', font: { family: 'Fira Code', size: 11 } } } },
+    scales: {
+      x: { ticks: { color: d ? '#64748b' : '#94a3b8' }, grid: { color: d ? 'rgba(0, 255, 209, 0.05)' : '#f1f5f9' } },
+      y: { ticks: { color: d ? '#64748b' : '#94a3b8' }, grid: { color: d ? 'rgba(0, 255, 209, 0.05)' : '#f1f5f9' } },
+    },
+  };
+}
+
+function makeChart(canvasId, datasets) {
+  const c = isDark() ? neonColors : lightColors;
+  return new Chart(document.getElementById(canvasId), {
     type: 'line',
     data: {
       labels: DATA.days,
       datasets: datasets.map((ds, i) => ({
-        label: ds.label,
-        data: ds.data,
-        borderColor: colors[i % colors.length],
+        label: ds.label, data: ds.data,
+        borderColor: c[i % c.length],
         backgroundColor: 'transparent',
-        tension: 0.3,
-        pointRadius: 3,
+        tension: 0.3, pointRadius: 4, borderWidth: 2,
       })),
     },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: '#8b949e' } } },
-      scales: {
-        x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } },
-        y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } },
-      },
-    },
+    options: getChartOpts(),
   });
 }
-makeChart('availChart', DATA.availabilityData, 'Success %');
-makeChart('ttfbChart', DATA.ttfbData, 'TTFB ms');
+
+function updateCharts() {
+  const c = isDark() ? neonColors : lightColors;
+  [availChartInst, ttfbChartInst].forEach(chart => {
+    if (!chart) return;
+    chart.data.datasets.forEach((ds, i) => { ds.borderColor = c[i % c.length]; });
+    Object.assign(chart.options, getChartOpts());
+    chart.update();
+  });
+}
+
+availChartInst = makeChart('availChart', DATA.availabilityData);
+ttfbChartInst = makeChart('ttfbChart', DATA.ttfbData);
 
 if (DATA.lastMeasurement) {
   const ltbody = document.querySelector('#latest tbody');
   DATA.lastMeasurement.results.forEach(r => {
     const cls = r.status === 'ok' ? 'ok' : 'fail';
-    ltbody.innerHTML += '<tr><td>' + r.name + '</td><td class="' + cls + '">' + r.status + '</td><td>' + r.ttfb_ms + 'ms</td><td>' + r.speed_1mb_kbps + ' KB/s</td><td>' + (r.speed_10mb_kbps != null ? r.speed_10mb_kbps + ' KB/s' : '\u2014') + '</td></tr>';
+    const icon = r.status === 'ok' ? svgOk : svgFail;
+    ltbody.innerHTML += '<tr class="transition-colors duration-150 dark:hover:bg-neon-cyan/5 hover:bg-teal-50"><td class="font-medium">' + r.name + '</td><td>' + icon + '</td><td>' + r.ttfb_ms + 'ms</td><td>' + r.speed_1mb_kbps + ' KB/s</td><td>' + (r.speed_10mb_kbps != null ? r.speed_10mb_kbps + ' KB/s' : '\u2014') + '</td></tr>';
   });
 }
 
