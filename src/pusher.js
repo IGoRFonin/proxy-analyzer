@@ -24,21 +24,21 @@ export async function push(repoDir) {
     return;
   }
 
-  const sshArgs = process.env.SYNC_KEY
-    ? `-e "ssh -i ${process.env.SYNC_KEY} -o StrictHostKeyChecking=no"`
-    : '-e "ssh -o StrictHostKeyChecking=no"';
+  const sshCmd = process.env.SYNC_KEY
+    ? `ssh -i ${process.env.SYNC_KEY} -o StrictHostKeyChecking=no`
+    : 'ssh -o StrictHostKeyChecking=no';
 
   try {
     await exec('rsync', [
       '-az', '--delete',
-      ...sshArgs.split(' '),
+      '-e', sshCmd,
       `${repoDir}/data/`,
       `${target}/data/`,
     ]);
 
     await exec('rsync', [
       '-az', '--delete',
-      ...sshArgs.split(' '),
+      '-e', sshCmd,
       `${repoDir}/public/`,
       `${target}/public/`,
     ]);
