@@ -1,5 +1,5 @@
 const VALID_TRANSPORTS = ['tcp', 'xhttp', 'socks5', 'http'];
-const NAME_REGEX = /^[a-zA-Z0-9-]+$/;
+const NAME_REGEX = /^.+$/;
 const URL_REGEX = /^(http|socks5):\/\/.+/;
 
 export function validate(content) {
